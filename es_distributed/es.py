@@ -1,6 +1,8 @@
 import logging
 import time
 from collections import namedtuple
+import os
+
 
 
 import numpy as np
@@ -51,7 +53,7 @@ class RunningStat(object):
 class SharedNoiseTable(object):
     def __init__(self):
         import ctypes, multiprocessing
-        seed = 123
+        seed = os.environ['SLURM_JOB_ID'] if 'SLURM_JOB_ID' in os.environ else 123
         count = 250000000  # 1 gigabyte of 32-bit numbers. Will actually sample 2 gigabytes below.
         logger.info('Sampling {} random numbers with seed {}'.format(count, seed))
         self._shared_mem = multiprocessing.Array(ctypes.c_float, count)
@@ -419,7 +421,7 @@ def run_worker(master_redis_cfg, relay_redis_cfg, noise, *, min_task_runtime=.2)
                 policy.set_trainable_flat(task_data.params - v)
                 rews_neg, len_neg, nov_vec_neg = rollout_and_update_ob_stat(
                     policy, env, task_data.timestep_limit, rs, task_ob_stat, config.calc_obstat_prob)
-    
+
                 signreturns.append([np.sign(rews_pos).sum(), np.sign(rews_neg).sum()])
                 noise_inds.append(noise_idx)
                 returns.append([rews_pos.sum(), rews_neg.sum()])
